@@ -89,18 +89,20 @@ fpm -t deb    -p "$WORK/deb/"  -d rustdesk "${fpm_common[@]}" usr
 fpm -t rpm    -p "$WORK/rpm/"  -d rustdesk "${fpm_common[@]}" usr
 fpm -t pacman -p "$WORK/arch/" -d rustdesk "${fpm_common[@]}" usr
 
-# Admin (technician) client packages: pre-built branded custom clients from
-# the RustDesk console, committed under admin/. Server + public key are baked
-# in (no access password). Included in the repos so admin machines can
-# `install gorm-help`, but deliberately NOT listed on the landing page or
-# blacklog.net. Dropped into the same staging dirs so the indexers below
-# pick them up automatically.
-if [ -d "$ROOT/admin" ]; then
-  echo "==> Including admin client packages"
-  cp "$ROOT"/admin/*.deb          "$WORK/deb/"  2>/dev/null || true
-  cp "$ROOT"/admin/*.rpm          "$WORK/rpm/"  2>/dev/null || true
-  cp "$ROOT"/admin/*.pkg.tar.zst  "$WORK/arch/" 2>/dev/null || true
-fi
+# Pre-built branded custom clients from the RustDesk console, committed here:
+#   normal/  -> gorm-help        (locked-down client for supportees)
+#   admin/   -> gorm-help-admin  (full-control technician client)
+# Both bake in the server address + public key (no access password). They are
+# dropped into the same staging dirs so the indexers below pick them up. The
+# admin package is deliberately NOT listed on the landing page or blacklog.net.
+for d in normal admin; do
+  if [ -d "$ROOT/$d" ]; then
+    echo "==> Including $d client packages"
+    cp "$ROOT/$d"/*.deb          "$WORK/deb/"  2>/dev/null || true
+    cp "$ROOT/$d"/*.rpm          "$WORK/rpm/"  2>/dev/null || true
+    cp "$ROOT/$d"/*.pkg.tar.zst  "$WORK/arch/" 2>/dev/null || true
+  fi
+done
 
 # ---------------------------------------------------------------------
 # 3. GPG: import the signing key, export the public part for clients
