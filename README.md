@@ -33,3 +33,24 @@ their normal package manager (`apt upgrade` / `dnf upgrade` / `pacman -Syu`).
 
 See the landing page at https://pkgs.blacklog.net (generated from
 `web/index.html.tmpl`) for per-distro one-liners.
+
+## Admin (technician) client
+
+`admin/` holds the pre-built branded custom clients (`gorm-help`) generated
+from the RustDesk Pro console — Debian, Fedora and Arch. They embed the
+server address, api-server (console login) and the public key; no access
+password. The build script folds them into the apt/dnf/pacman repos so
+admin machines can install them:
+
+```
+sudo apt install gorm-help        # or dnf / pacman
+```
+
+They are intentionally **not** linked from the landing page or blacklog.net —
+present in the repo index but unadvertised. Note the repos are public and
+unauthenticated, so the packages are discoverable by anyone who lists the
+index; there is nothing secret in them beyond the (public) server key.
+
+To refresh after a RustDesk version bump: log into the console, rebuild the
+`* admin` custom clients (they use RustDesk's ephemeral build server, so the
+download URL expires), download the artifacts into `admin/`, and push.
