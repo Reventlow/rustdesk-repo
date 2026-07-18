@@ -58,7 +58,14 @@ blacklog.net (present in the index but unadvertised). The repos are public
 and unauthenticated, so it's discoverable by listing the index; nothing in it
 is secret beyond the (public) server key.
 
-To refresh after a RustDesk version bump: console login (email MFA), rebuild
-the `* help` and `* admin` custom clients (RustDesk's build server is
-ephemeral, so download URLs expire), drop the artifacts into `normal/` and
-`admin/`, and push.
+To refresh after a RustDesk version bump, run the helper — it logs in, builds
+all six console clients, downloads them into `normal/`/`admin/` and drops the
+old version. It pauses once for the email MFA code; nothing else is manual:
+
+```
+RUSTDESK_PASSWORD=... ./scripts/rebuild-branded.sh
+# paste the MFA code when prompted, then review + push as it instructs
+```
+
+(RustDesk's build server is ephemeral, so the artifacts must be rebuilt each
+time rather than re-downloaded from an old URL.)
