@@ -1,0 +1,23 @@
+# Silent RustDesk install preconfigured for the Blacklog server.
+# Run as Administrator:  powershell -ExecutionPolicy Bypass -File .\install-blacklog-rustdesk.ps1
+$ErrorActionPreference = "Stop"
+
+$Host_ = "@HOST@"
+$Key   = "@KEY@"
+$Url   = "https://pkgs.blacklog.net/downloads/rustdesk-@VERSION@-x86_64.exe"
+$Exe   = "$env:TEMP\rustdesk-installer.exe"
+
+Write-Host "Downloading RustDesk @VERSION@..."
+Invoke-WebRequest -Uri $Url -OutFile $Exe
+
+Write-Host "Installing silently..."
+Start-Process -FilePath $Exe -ArgumentList "--silent-install" -Wait
+Start-Sleep -Seconds 5
+
+$RustDesk = "$env:ProgramFiles\RustDesk\rustdesk.exe"
+Write-Host "Applying Blacklog server configuration..."
+& $RustDesk --option custom-rendezvous-server $Host_
+& $RustDesk --option relay-server $Host_
+& $RustDesk --option key $Key
+
+Write-Host "Done. RustDesk is configured for $Host_."

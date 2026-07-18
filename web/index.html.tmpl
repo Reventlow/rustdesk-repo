@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blacklog Package Repository</title>
+  <style>
+    :root { --bg:#0A101E; --surface:#101828; --line:#1E2B47; --ink:#E8EDF8;
+            --dim:#8391AE; --accent:#F2A93B; --ok:#3BD3A2; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink);
+           max-width:880px; margin:0 auto; padding:40px 24px; line-height:1.6; }
+    h1 { font-size:22px; margin-bottom:4px; }
+    h1 span { color:var(--accent); }
+    .sub { color:var(--dim); margin-bottom:28px; }
+    h2 { font-size:15px; margin:28px 0 10px; color:var(--accent);
+         text-transform:uppercase; letter-spacing:.1em; }
+    pre { background:var(--surface); border:1px solid var(--line); border-radius:8px;
+          padding:14px 16px; overflow-x:auto; font-size:13px; margin:8px 0; }
+    a { color:var(--accent); }
+    .pill { display:inline-block; background:var(--surface); border:1px solid var(--line);
+            border-radius:99px; padding:2px 12px; font-size:13px; color:var(--ok); }
+    p { margin:6px 0; color:var(--dim); }
+  </style>
+</head>
+<body>
+  <h1>BLACKLOG <span>//</span> package repository</h1>
+  <p class="sub">RustDesk @VERSION@, preconfigured for help.blacklog.net &nbsp;<span class="pill">current: @VERSION@</span></p>
+
+  <h2>Debian / Ubuntu (apt)</h2>
+  <pre>curl -fsSL https://pkgs.blacklog.net/blacklog-repo.key | sudo tee /etc/apt/keyrings/blacklog.asc
+echo "deb [signed-by=/etc/apt/keyrings/blacklog.asc] https://pkgs.blacklog.net/apt stable main" | sudo tee /etc/apt/sources.list.d/blacklog.list
+sudo apt update && sudo apt install rustdesk rustdesk-blacklog-config</pre>
+
+  <h2>Fedora / RHEL (dnf)</h2>
+  <pre>sudo tee /etc/yum.repos.d/blacklog.repo &lt;&lt;'EOF'
+[blacklog]
+name=Blacklog RustDesk
+baseurl=https://pkgs.blacklog.net/rpm
+enabled=1
+gpgcheck=0
+repo_gpgcheck=1
+gpgkey=https://pkgs.blacklog.net/blacklog-repo.key
+EOF
+sudo dnf install rustdesk rustdesk-blacklog-config</pre>
+
+  <h2>Arch (pacman)</h2>
+  <pre>sudo tee -a /etc/pacman.conf &lt;&lt;'EOF'
+[blacklog]
+SigLevel = Optional TrustAll
+Server = https://pkgs.blacklog.net/arch
+EOF
+sudo pacman -Sy rustdesk rustdesk-blacklog-config</pre>
+  <p>If no rustdesk package is listed for a release, upstream skipped the Arch build — install <code>rustdesk-bin</code> from the AUR and just add <code>rustdesk-blacklog-config</code>.</p>
+
+  <h2>Windows</h2>
+  <p>Self-configuring installer (the server address is embedded in the filename — do not rename it):</p>
+  <pre><a href="/downloads/rustdesk-host=@HOST@,key=@KEY@.exe">rustdesk-host=@HOST@,key=….exe</a></pre>
+  <p>Fleet deployment: <a href="/downloads/install-blacklog-rustdesk.ps1">install-blacklog-rustdesk.ps1</a> (silent install + config, run as admin).</p>
+
+  <h2>macOS</h2>
+  <p>Install the <a href="/downloads/">dmg for your CPU</a>, then run
+     <a href="/downloads/macos-configure.sh">macos-configure.sh</a> once.</p>
+
+  <h2>Browse</h2>
+  <p><a href="/downloads/">downloads/</a> · <a href="/apt/">apt/</a> · <a href="/rpm/">rpm/</a> · <a href="/arch/">arch/</a> · <a href="/blacklog-repo.key">signing key</a></p>
+</body>
+</html>
