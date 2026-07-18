@@ -155,6 +155,11 @@ if [ -n "$WIN_EXE" ]; then
   cp "$WIN_EXE" "$DL/$(basename "$WIN_EXE")"
 fi
 cp "$WORK"/mac/*.dmg "$DL/" 2>/dev/null || true
+# Stable-named copies so external links (blacklog.net) survive version bumps.
+for arch in x86_64 aarch64; do
+  src=$(ls "$WORK"/mac/rustdesk-*-$arch.dmg 2>/dev/null | head -1 || true)
+  [ -n "$src" ] && cp "$src" "$DL/rustdesk-latest-$arch.dmg"
+done
 
 # Silent-deploy script for Windows fleets.
 sed -e "s|@HOST@|$RD_HOST|g" -e "s|@KEY@|$RD_KEY|g" -e "s|@VERSION@|$VERSION|g" \
