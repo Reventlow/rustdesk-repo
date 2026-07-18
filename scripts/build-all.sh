@@ -115,19 +115,23 @@ gpg --armor --export "$GPG_KEY_ID" > "$OUT/blacklog-repo.key"
 # ---------------------------------------------------------------------
 echo "==> Building apt repository"
 APT="$OUT/apt"
-mkdir -p "$APT/pool/main" "$APT/dists/stable/main/binary-amd64" "$APT/dists/stable/main/binary-arm64" "$APT/dists/stable/main/binary-all"
+mkdir -p "$APT/pool/main" "$APT/dists/stable/main/binary-amd64" "$APT/dists/stable/main/binary-arm64"
 cp "$WORK"/deb/*.deb "$APT/pool/main/"
 cd "$APT"
-apt-ftparchive --arch amd64 packages pool > dists/stable/main/binary-amd64/Packages
-apt-ftparchive --arch arm64 packages pool > dists/stable/main/binary-arm64/Packages
-apt-ftparchive --arch all   packages pool > dists/stable/main/binary-all/Packages
-for d in dists/stable/main/binary-*; do gzip -kf "$d/Packages"; done
+# NOTE: `apt-ftparchive --arch X packages` does NOT filter to that arch — it
+# silently drops every real arch package and keeps only Architecture:all, so
+# it must not be used here. Generate the full index once (all stanzas) and
+# serve it for both arches; apt selects installable candidates by each
+# package's Architecture: field, ignoring foreign-arch stanzas.
+apt-ftparchive packages pool > dists/stable/main/binary-amd64/Packages
+cp dists/stable/main/binary-amd64/Packages dists/stable/main/binary-arm64/Packages
+for d in dists/stable/main/binary-amd64 dists/stable/main/binary-arm64; do gzip -kf "$d/Packages"; done
 apt-ftparchive \
   -o APT::FTPArchive::Release::Origin=Blacklog \
   -o APT::FTPArchive::Release::Label=Blacklog \
   -o APT::FTPArchive::Release::Suite=stable \
   -o APT::FTPArchive::Release::Codename=stable \
-  -o APT::FTPArchive::Release::Architectures="amd64 arm64 all" \
+  -o APT::FTPArchive::Release::Architectures="amd64 arm64" \
   -o APT::FTPArchive::Release::Components=main \
   release dists/stable > dists/stable/Release
 gpg --default-key "$GPG_KEY_ID" --batch --yes --clearsign -o dists/stable/InRelease dists/stable/Release
