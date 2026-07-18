@@ -1,0 +1,76 @@
+name: Version check + notify
+
+# Daily nag until the branded packages / relay are caught up.
+#
+# Fires at 08:00 UTC = 10:00 Europe/Copenhagen during summer time (CEST);
+# 09:00 local in winter (GitHub cron has no DST). Each run re-checks and
+# re-notifies if still behind, so it repeats every day until solved — the
+# "solved" state is simply the versions matching again, no stored state.
+#
+# What it watches:
+#   * rustdesk client (rustdesk/rustdesk) vs the version committed in normal/.
+#     The plain `rustdesk` package auto-updates via the build pipeline, but the
+#     branded gorm-help / gorm-help-admin packages need a manual console
+#     rebuild (email MFA) — this is the reminder to do that.
+#   * rustdesk-server-pro (the relay) vs RELAY_VERSION. The relay is on manual
+#     updates on purpose; bump RELAY_VERSION after you update it to silence.
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NTFY_URL: https://ntfy.blacklog.net
+  NTFY_TOPIC: rustdesk-updates
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check client and relay versions, notify if behind
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh_latest() {  # $1 = owner/repo -> latest release tag without a leading v
+            curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+              "https://api.github.com/repos/$1/releases/latest" \
+              | jq -r '.tag_name' | sed 's/^v//'
+          }
+
+          notify() {  # $1 title, $2 message, $3 tags
+            curl -fsSL -X POST "$NTFY_URL/$NTFY_TOPIC" \
+              -H "Title: $1" -H "Tags: $3" -H "Priority: high" \
+              -H "Click: https://pkgs.blacklog.net" \
+              -d "$2" >/dev/null
+            echo "notified: $1"
+          }
+
+          # --- client: latest release vs what the branded packages ship ---
+          CLIENT_LATEST=$(gh_latest rustdesk/rustdesk)
+          CLIENT_HAVE=$(ls normal/ | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "client: latest=$CLIENT_LATEST have=$CLIENT_HAVE"
+          if [ -n "$CLIENT_LATEST" ] && [ "$CLIENT_LATEST" != "$CLIENT_HAVE" ]; then
+            notify "RustDesk client update" \
+              "Client $CLIENT_LATEST is out; branded gorm-help / gorm-help-admin still on $CLIENT_HAVE. Rebuild: console -> build the 6 custom clients -> drop into normal//admin/ -> push." \
+              "package,arrow_up"
+          fi
+
+          # --- relay: latest server-pro vs the deployed baseline ---
+          RELAY_LATEST=$(gh_latest rustdesk/rustdesk-server-pro || true)
+          RELAY_HAVE=$(cat RELAY_VERSION | tr -d '[:space:]')
+          echo "relay: latest=$RELAY_LATEST have=$RELAY_HAVE"
+          if [ -n "$RELAY_LATEST" ] && [ "$RELAY_LATEST" != "$RELAY_HAVE" ]; then
+            notify "RustDesk relay update" \
+              "rustdesk-server-pro $RELAY_LATEST available; zima relay running $RELAY_HAVE. Update the two relay containers, then bump RELAY_VERSION to silence this." \
+              "satellite,arrow_up"
+          fi
+
+          echo "version check complete"
