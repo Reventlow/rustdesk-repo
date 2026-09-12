@@ -46,17 +46,21 @@ and public key (no access password):
   login + address book enabled). App-name "Gorm-Help-Admin" so it installs
   under a distinct package name and can sit alongside `gorm-help`.
 
-The build script folds both into the apt/dnf/pacman indexes:
+The build script folds both into the apt and dnf indexes. For pacman the
+admin client gets its **own repo** (`/arch-admin`, db `blacklog-admin`) so
+the public `[blacklog]` index only carries `rustdesk`, the config package and
+`gorm-help`:
 
 ```
-sudo pacman -Sy gorm-help          # or apt / dnf install
-sudo pacman -Sy gorm-help-admin
+sudo pacman -Sy gorm-help          # [blacklog]     — or apt / dnf install
+sudo pacman -Sy gorm-help-admin    # [blacklog-admin], Server = https://pkgs.blacklog.net/arch-admin
 ```
 
 `gorm-help-admin` is intentionally **not** linked from the landing page or
-blacklog.net (present in the index but unadvertised). The repos are public
-and unauthenticated, so it's discoverable by listing the index; nothing in it
-is secret beyond the (public) server key.
+blacklog.net; the `[blacklog-admin]` pacman snippet is only documented on the
+private start page (dashy.blacklog.net, BlackLog → Repositories). The repos
+are public and unauthenticated, so it's discoverable by listing the tree;
+nothing in it is secret beyond the (public) server key.
 
 To refresh after a RustDesk version bump, run the helper — it logs in, builds
 all six console clients, downloads them into `normal/`/`admin/` and drops the

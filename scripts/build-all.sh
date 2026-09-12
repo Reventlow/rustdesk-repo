@@ -95,14 +95,19 @@ fpm -t pacman -p "$WORK/arch/" -d rustdesk "${fpm_common[@]}" usr
 # Both bake in the server address + public key (no access password). They are
 # dropped into the same staging dirs so the indexers below pick them up. The
 # admin package is deliberately NOT listed on the landing page or blacklog.net.
+# For pacman the admin client gets its own repo (/arch-admin, step 6b) instead
+# of riding in the public [blacklog] index; its install snippet lives on the
+# private dashy.blacklog.net start page.
 for d in normal admin; do
   if [ -d "$ROOT/$d" ]; then
     echo "==> Including $d client packages"
     cp "$ROOT/$d"/*.deb          "$WORK/deb/"  2>/dev/null || true
     cp "$ROOT/$d"/*.rpm          "$WORK/rpm/"  2>/dev/null || true
-    cp "$ROOT/$d"/*.pkg.tar.zst  "$WORK/arch/" 2>/dev/null || true
   fi
 done
+cp "$ROOT"/normal/*.pkg.tar.zst "$WORK/arch/" 2>/dev/null || true
+mkdir -p "$WORK/arch-admin"
+cp "$ROOT"/admin/*.pkg.tar.zst  "$WORK/arch-admin/" 2>/dev/null || true
 
 # ---------------------------------------------------------------------
 # 3. GPG: import the signing key, export the public part for clients
@@ -159,6 +164,21 @@ mkdir -p "$ARCH"
 cp "$WORK"/arch/*.pkg.tar.zst "$ARCH/" 2>/dev/null || echo "    (no upstream arch package this release — config package only)"
 docker run --rm -v "$ARCH":/repo archlinux:latest \
   bash -c "repo-add /repo/blacklog.db.tar.gz /repo/*.pkg.tar.zst"
+
+# 6b. Separate pacman repository for the technician client. Same server key,
+# distinct db name so it is added as its own [blacklog-admin] entry:
+#   [blacklog-admin]
+#   SigLevel = Optional TrustAll
+#   Server = https://pkgs.blacklog.net/arch-admin
+echo "==> Building pacman admin repository"
+ARCH_ADMIN="$OUT/arch-admin"
+mkdir -p "$ARCH_ADMIN"
+if cp "$WORK"/arch-admin/*.pkg.tar.zst "$ARCH_ADMIN/" 2>/dev/null; then
+  docker run --rm -v "$ARCH_ADMIN":/repo archlinux:latest \
+    bash -c "repo-add /repo/blacklog-admin.db.tar.gz /repo/*.pkg.tar.zst"
+else
+  echo "    (no admin arch package committed — skipping)"
+fi
 
 # ---------------------------------------------------------------------
 # 7. Windows + macOS downloads (filename-embedded config for Windows)
