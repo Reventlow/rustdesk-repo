@@ -53,6 +53,55 @@ EOF
 sudo pacman -Sy rustdesk rustdesk-blacklog-config</pre>
   <p>If no rustdesk package is listed for a release, upstream skipped the Arch build — install <code>rustdesk-bin</code> from the AUR and just add <code>rustdesk-blacklog-config</code>.</p>
 
+  <h2 id="nixos">NixOS</h2>
+  <p>No package repo needed — <code>rustdesk-flutter</code> is in nixpkgs (the variant the binary cache carries). Point it at the Blacklog server either once from the shell:</p>
+  <pre>environment.systemPackages = [ pkgs.rustdesk-flutter ];   # configuration.nix, then nixos-rebuild switch
+
+rustdesk --option custom-rendezvous-server @HOST@
+rustdesk --option relay-server @HOST@
+rustdesk --option key @KEY@</pre>
+  <p>…or fully declaratively (unattended-access daemon + seeded config for every user), as a NixOS module:</p>
+  <pre>{ pkgs, lib, ... }:
+let
+  cfg = pkgs.writeText "RustDesk2.toml" ''
+    rendezvous_server = '@HOST@'
+    nat_type = 1
+    serial = 0
+
+    [options]
+    custom-rendezvous-server = '@HOST@'
+    relay-server = '@HOST@'
+    api-server = 'https://@HOST@'
+    key = '@KEY@'
+  '';
+  users = [ "alice" ];   # who gets the seeded client config
+in {
+  environment.systemPackages = [ pkgs.rustdesk-flutter ];
+
+  systemd.services.rustdesk = {
+    description = "RustDesk remote desktop service";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      ExecStart = "${pkgs.rustdesk-flutter}/bin/rustdesk --service";
+      Restart = "on-failure";
+      PIDFile = "/run/rustdesk.pid";
+    };
+  };
+
+  # tmpfiles `C` copies only if the file does not exist yet, so later GUI
+  # changes are kept.
+  systemd.tmpfiles.rules = [
+    "d /root/.config/rustdesk 0700 root root -"
+    "C /root/.config/rustdesk/RustDesk2.toml 0600 root root - ${cfg}"
+  ] ++ lib.concatMap (u: [
+    "d /home/${u}/.config/rustdesk 0700 ${u} ${u} -"
+    "C /home/${u}/.config/rustdesk/RustDesk2.toml 0600 ${u} ${u} - ${cfg}"
+  ]) users;
+}</pre>
+  <p>On a Wayland desktop, incoming control works once a user is logged in (PipeWire portal); the login screen is not reachable.</p>
+
   <h2>Windows</h2>
   <p>Self-configuring installer (the server address is embedded in the filename — do not rename it):</p>
   <pre><a href="/downloads/rustdesk-host=@HOST@,key=@KEY@.exe">rustdesk-host=@HOST@,key=….exe</a></pre>
