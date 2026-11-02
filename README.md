@@ -13,12 +13,18 @@ A daily GitHub Actions run (`.github/workflows/build.yml`):
 3. Builds `rustdesk-blacklog-config` — a small companion package for each
    format whose post-install points the RustDesk service at the Blacklog
    server (`--option custom-rendezvous-server / relay-server / key`).
-4. Generates signed **apt**, **dnf** and **pacman** repo trees.
-5. Prepares Windows/macOS downloads: the official Windows installer renamed
+4. Mirrors the official **Proton Mail desktop** app (`.deb` + `.rpm`) from
+   Proton's release feed (`proton.me/download/mail/linux/version.json`):
+   newest **Stable** release only, each file verified against Proton's
+   published SHA512 (mismatch fails the build), published unchanged as
+   `proton-mail`. Proton has no Linux repo and the app's autoUpdater is a
+   no-op on Linux, so this is how Linux clients stay current.
+5. Generates signed **apt**, **dnf** and **pacman** repo trees.
+6. Prepares Windows/macOS downloads: the official Windows installer renamed
    with filename-embedded config (`rustdesk-host=…,key=….exe` — RustDesk
    reads its own filename on first run), a silent-deploy `install.ps1`, the
    macOS dmgs and a one-shot configure script.
-6. Ships everything in an nginx image → `ghcr.io/reventlow/rustdesk-repo:latest`.
+7. Ships everything in an nginx image → `ghcr.io/reventlow/rustdesk-repo:latest`.
 
 Watchtower on zima auto-deploys the new image; clients then update through
 their normal package manager (`apt upgrade` / `dnf upgrade` / `pacman -Syu`).

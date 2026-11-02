@@ -4,8 +4,9 @@
 # Mirrors the latest official RustDesk release (deb/rpm/arch when present,
 # Windows exe, macOS dmg), builds the rustdesk-blacklog-config companion
 # package for each Linux format, and generates signed apt/dnf/pacman repo
-# trees plus a downloads directory. Output lands in ./out ready to be
-# copied into the nginx image.
+# trees plus a downloads directory. Also mirrors the official Proton Mail
+# desktop app (Stable channel, SHA512-verified) into the apt/dnf repos.
+# Output lands in ./out ready to be copied into the nginx image.
 #
 # Requires: curl, jq, fpm, apt-utils (apt-ftparchive), createrepo-c, gpg,
 # docker (for repo-add in an archlinux container).
@@ -51,6 +52,43 @@ download_assets '^rustdesk-.*-x86_64\\.exe$'                   "$WORK/win"
 download_assets '^rustdesk-.*\\.dmg$'                          "$WORK/mac"
 # openSUSE rpms would collide with the Fedora ones in one repo — drop them.
 rm -f "$WORK"/rpm/*suse*.rpm
+
+# ---------------------------------------------------------------------
+# 1b. Mirror the official Proton Mail desktop app (deb/rpm, unchanged)
+# ---------------------------------------------------------------------
+# Proton ships Linux builds only as direct downloads, and the app's own
+# Electron autoUpdater is a no-op on Linux — so without a repo the clients
+# never update. We take the newest *Stable* release from Proton's release
+# feed (skipping EarlyAccess/Alpha), verify each file against the SHA512
+# Proton publishes there, and drop it into the same staging dirs so the
+# apt/dnf indexers below pick it up. A checksum mismatch fails the build,
+# leaving the previously published image in place.
+echo "==> Mirroring Proton Mail desktop (Stable channel)"
+PROTON_JSON="$WORK/proton-mail.json"
+curl -fsSL https://proton.me/download/mail/linux/version.json -o "$PROTON_JSON"
+PROTON_VERSION=$(jq -r '[.Releases[] | select(.CategoryName == "Stable") | .Version] | .[]' "$PROTON_JSON" |
+  sort -V | tail -1)
+[ -n "$PROTON_VERSION" ] || { echo "No Stable Proton Mail release in feed"; exit 1; }
+echo "    proton-mail stable version: $PROTON_VERSION"
+echo "$PROTON_VERSION" > "$OUT/PROTON_MAIL_VERSION"
+
+mirror_proton() {
+  # $1: file extension (deb|rpm); $2: destination directory
+  local ext="$1" dest="$2" url sum file
+  read -r url sum < <(jq -r --arg v "$PROTON_VERSION" --arg ext ".$ext" '
+    .Releases[] | select(.CategoryName == "Stable" and .Version == $v)
+    | .File[] | select(.Url | endswith($ext)) | "\(.Url) \(.Sha512CheckSum)"' "$PROTON_JSON" | head -1)
+  [ -n "${url:-}" ] || { echo "No .$ext asset for Proton Mail $PROTON_VERSION"; exit 1; }
+  # Upstream names every version ProtonMail-desktop-beta.<ext>; give the
+  # mirrored copy a versioned name so pool/ entries stay unambiguous.
+  file="$dest/proton-mail-$PROTON_VERSION.$ext"
+  echo "    downloading $url"
+  curl -fsSL "$url" -o "$file"
+  echo "$sum  $file" | sha512sum -c --quiet - ||
+    { echo "SHA512 mismatch for $url — refusing to publish"; exit 1; }
+}
+mirror_proton deb "$WORK/deb"
+mirror_proton rpm "$WORK/rpm"
 
 # ---------------------------------------------------------------------
 # 2. Build the rustdesk-blacklog-config companion package (deb/rpm/arch)
@@ -217,6 +255,7 @@ EOF
 # 8. Landing page
 # ---------------------------------------------------------------------
 sed -e "s|@VERSION@|$VERSION|g" -e "s|@HOST@|$RD_HOST|g" -e "s|@KEY@|$RD_KEY|g" \
+  -e "s|@PROTON_VERSION@|$PROTON_VERSION|g" \
   "$ROOT/web/index.html.tmpl" > "$OUT/index.html"
 
 echo "==> Done. Repo tree in $OUT (upstream $VERSION)"
