@@ -13,12 +13,15 @@ A daily GitHub Actions run (`.github/workflows/build.yml`):
 3. Builds `rustdesk-blacklog-config` — a small companion package for each
    format whose post-install points the RustDesk service at the Blacklog
    server (`--option custom-rendezvous-server / relay-server / key`).
-4. Mirrors the official **Proton Mail desktop** app (`.deb` + `.rpm`) from
-   Proton's release feed (`proton.me/download/mail/linux/version.json`):
-   newest **Stable** release only, each file verified against Proton's
-   published SHA512 (mismatch fails the build), published unchanged as
-   `proton-mail`. Proton has no Linux repo and the app's autoUpdater is a
-   no-op on Linux, so this is how Linux clients stay current.
+4. Mirrors the official **Proton desktop apps** — Mail, Pass, Authenticator
+   and Meet (`.deb` + `.rpm`) — from Proton's release feeds
+   (`proton.me/download/<app>/linux/version.json`): newest **Stable**
+   release only, each file verified against Proton's published SHA512
+   (mismatch fails the build), published unchanged as `proton-mail`,
+   `proton-pass`, `proton-authenticator`, `proton-meet`. Proton has no Linux
+   repo and the apps' autoUpdater is a no-op on Linux, so this is how Linux
+   clients stay current. Calendar has no separate Linux app (it is in Mail).
+   Add an app = one line in `PROTON_APPS` in `scripts/build-all.sh`.
 5. Generates signed **apt**, **dnf** and **pacman** repo trees.
 6. Prepares Windows/macOS downloads: the official Windows installer renamed
    with filename-embedded config (`rustdesk-host=…,key=….exe` — RustDesk
@@ -28,6 +31,9 @@ A daily GitHub Actions run (`.github/workflows/build.yml`):
 
 Watchtower on zima auto-deploys the new image; clients then update through
 their normal package manager (`apt upgrade` / `dnf upgrade` / `pacman -Syu`).
+
+A failed build posts a high-priority ntfy to `ntfy.blacklog.net/rustdesk-updates`
+(same topic as the version-check nag) with a link to the run.
 
 ## Secrets
 

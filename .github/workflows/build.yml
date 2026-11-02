@@ -52,3 +52,15 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ghcr.io/reventlow/rustdesk-repo:latest
+
+      # Without this a failing daily build is silent: the old image simply
+      # stays live. Same ntfy topic as the version-check nag.
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -fsS -X POST "https://ntfy.blacklog.net/rustdesk-updates" \
+            -H "Title: pkgs.blacklog.net build FAILED" \
+            -H "Tags: rotating_light,package" -H "Priority: high" \
+            -H "Click: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            -d "Build of ${{ github.sha }} (${{ github.event_name }}) failed; the previous repo image stays live. Tap for the log." \
+            || echo "ntfy post failed"

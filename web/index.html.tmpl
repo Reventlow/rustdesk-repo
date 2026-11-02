@@ -111,10 +111,10 @@ in {
   <p>Install the <a href="/downloads/">dmg for your CPU</a>, then run
      <a href="/downloads/macos-configure.sh">macos-configure.sh</a> once.</p>
 
-  <h2 id="proton-mail">Proton Mail desktop (Linux)</h2>
-  <p>The same apt and dnf repos also carry an unmodified mirror of Proton's official Linux app, Stable channel (currently @PROTON_VERSION@), SHA512-checked against Proton's release feed. Proton offers no Linux repo of its own and the app cannot update itself on Linux, so this keeps it current through <code>apt upgrade</code> / <code>dnf upgrade</code>. With the repo added as above:</p>
-  <pre>sudo dnf install proton-mail      # Fedora / RHEL
-sudo apt install proton-mail      # Debian / Ubuntu</pre>
+  <h2 id="proton">Proton desktop apps (Linux)</h2>
+  <p>The same apt and dnf repos also carry unmodified mirrors of Proton's official Linux apps, Stable channel (currently @PROTON_APPS@), each file SHA512-checked against Proton's release feed. Proton offers no Linux repo of its own and the apps cannot update themselves on Linux, so this keeps them current through <code>apt upgrade</code> / <code>dnf upgrade</code>. Proton Calendar is built into the Mail app. With the repo added as above:</p>
+  <pre>sudo dnf install proton-mail proton-pass proton-authenticator proton-meet   # Fedora / RHEL
+sudo apt install proton-mail proton-pass proton-authenticator proton-meet   # Debian / Ubuntu</pre>
 
   <h2>Browse</h2>
   <p><a href="/downloads/">downloads/</a> · <a href="/apt/">apt/</a> · <a href="/rpm/">rpm/</a> · <a href="/arch/">arch/</a> · <a href="/blacklog-repo.key">signing key</a></p>
